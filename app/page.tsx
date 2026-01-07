@@ -25,9 +25,11 @@ export default function EventsPage() {
         });
 
         // Remove empty params
-        for (const [key, value] of [...params.entries()]) {
-          if (value === '') params.delete(key);
-        }
+        const keysToDelete: string[] = [];
+        params.forEach((value, key) => {
+          if (value === '') keysToDelete.push(key);
+        });
+        keysToDelete.forEach((key) => params.delete(key));
 
         const response = await fetch(`${GAMMA_API_URL}/events?${params}`);
 
