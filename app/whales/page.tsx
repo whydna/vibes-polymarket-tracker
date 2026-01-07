@@ -5,24 +5,31 @@ import type { Trade } from '@/types';
 import { TradeCard } from '@/components/TradeCard';
 
 const DATA_API_URL = '/api/data';
-const WHALE_THRESHOLD = 5000;
+
+const PRICE_POINTS = [
+  { value: 1000, label: '$1K+' },
+  { value: 5000, label: '$5K+' },
+  { value: 10000, label: '$10K+' },
+] as const;
 
 export default function WhalesPage() {
-  const [trades, setTrades] = useState<Trade[]>([]);
+  const [allTrades, setAllTrades] = useState<Trade[]>([]);
+  const [threshold, setThreshold] = useState(5000);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const filteredTrades = allTrades.filter((trade) => trade.size >= threshold);
+
   useEffect(() => {
     async function fetchTrades() {
       try {
-        const response = await fetch(`${DATA_API_URL}/trades?limit=100`);
+        const response = await fetch(`${DATA_API_URL}/trades?limit=100&sizeMin=1000`);
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`);
         }
         const data: Trade[] = await response.json();
-        const whaleTrades = data.filter((trade) => trade.size >= WHALE_THRESHOLD);
-        setTrades(whaleTrades);
+        setAllTrades(data);
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch trades');
@@ -43,14 +50,28 @@ export default function WhalesPage() {
     };
   }, []);
 
+  const currentLabel = PRICE_POINTS.find((p) => p.value === threshold)?.label || '$5K+';
+
   return (
     <div className="live-trades">
       <div className="live-header">
         <h2>Whale Trades</h2>
         <div className="live-indicator whale-indicator">
           <span className="live-dot" />
-          <span>$5,000+</span>
+          <span>{currentLabel}</span>
         </div>
+      </div>
+
+      <div className="price-filters">
+        {PRICE_POINTS.map((point) => (
+          <button
+            key={point.value}
+            className={`price-filter-btn ${threshold === point.value ? 'active' : ''}`}
+            onClick={() => setThreshold(point.value)}
+          >
+            {point.label}
+          </button>
+        ))}
       </div>
 
       {loading && (
@@ -67,15 +88,15 @@ export default function WhalesPage() {
         </div>
       )}
 
-      {!loading && !error && trades.length === 0 && (
+      {!loading && !error && filteredTrades.length === 0 && (
         <div className="empty">
-          <p>No whale trades found (waiting for $5,000+ bets)</p>
+          <p>No whale trades found (waiting for {currentLabel} bets)</p>
         </div>
       )}
 
-      {!loading && !error && trades.length > 0 && (
+      {!loading && !error && filteredTrades.length > 0 && (
         <div className="trades-list">
-          {trades.map((trade, index) => (
+          {filteredTrades.map((trade, index) => (
             <TradeCard key={`${trade.transactionHash}-${index}`} trade={trade} />
           ))}
         </div>

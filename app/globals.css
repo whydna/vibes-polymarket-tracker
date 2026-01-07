@@ -98,6 +98,37 @@ body {
   color: #fff;
 }
 
+/* Price Filters (Whale Page) */
+.price-filters {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.price-filter-btn {
+  padding: 0.5rem 1.25rem;
+  border: 1px solid #333;
+  border-radius: 20px;
+  background-color: transparent;
+  color: #888;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.price-filter-btn:hover {
+  border-color: #555;
+  color: #fff;
+}
+
+.price-filter-btn.active {
+  background-color: #00d4aa;
+  border-color: #00d4aa;
+  color: #0d0d0d;
+  font-weight: 600;
+}
+
 /* Main */
 .main {
   flex: 1;
