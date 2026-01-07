@@ -571,6 +571,16 @@ body {
   white-space: nowrap;
 }
 
+.trades-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.trades-table th.sortable:hover {
+  color: #fff;
+}
+
 .trades-table td {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid #222;

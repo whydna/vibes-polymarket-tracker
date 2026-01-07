@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { notFound, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import type { Trade } from '@/types';
@@ -49,8 +49,42 @@ export default function TradesPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState(0);
+  const [sortColumn, setSortColumn] = useState<'value' | 'odds' | 'time'>('time');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
+
+  const sortedTrades = useMemo(() => {
+    const sorted = [...allTrades].sort((a, b) => {
+      let aVal: number, bVal: number;
+      switch (sortColumn) {
+        case 'value':
+          aVal = a.size * a.price;
+          bVal = b.size * b.price;
+          break;
+        case 'odds':
+          aVal = a.price;
+          bVal = b.price;
+          break;
+        case 'time':
+        default:
+          aVal = a.timestamp;
+          bVal = b.timestamp;
+          break;
+      }
+      return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+    return sorted;
+  }, [allTrades, sortColumn, sortDirection]);
+
+  const handleSort = (column: 'value' | 'odds' | 'time') => {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
 
   useEffect(() => {
     async function fetchTrades() {
@@ -170,14 +204,20 @@ export default function TradesPage({
                 <th>User</th>
                 <th>Side</th>
                 <th>Outcome</th>
-                <th>Value</th>
-                <th>Odds</th>
+                <th className="sortable" onClick={() => handleSort('value')}>
+                  Value {sortColumn === 'value' ? (sortDirection === 'desc' ? '▼' : '▲') : '⇅'}
+                </th>
+                <th className="sortable" onClick={() => handleSort('odds')}>
+                  Odds {sortColumn === 'odds' ? (sortDirection === 'desc' ? '▼' : '▲') : '⇅'}
+                </th>
                 <th>Market</th>
-                <th>Time</th>
+                <th className="sortable" onClick={() => handleSort('time')}>
+                  Time {sortColumn === 'time' ? (sortDirection === 'desc' ? '▼' : '▲') : '⇅'}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {allTrades.map((trade, index) => (
+              {sortedTrades.map((trade, index) => (
                 <tr
                   key={`${trade.transactionHash}-${index}`}
                   onClick={() => window.open(`https://polymarket.com/event/${trade.eventSlug}`, '_blank')}
