@@ -48,7 +48,9 @@ export default function TradesPage({
   const [allTrades, setAllTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     async function fetchTrades() {
@@ -71,6 +73,7 @@ export default function TradesPage({
         });
 
         setError(null);
+        setLastUpdate(0);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch trades');
       } finally {
@@ -81,13 +84,22 @@ export default function TradesPage({
     // Reset trades when filter changes
     setAllTrades([]);
     setLoading(true);
+    setLastUpdate(0);
 
     fetchTrades();
-    intervalRef.current = setInterval(fetchTrades, 5000);
+    intervalRef.current = setInterval(fetchTrades, 30000);
+
+    // Count up timer for "last update"
+    countdownRef.current = setInterval(() => {
+      setLastUpdate((prev) => prev + 1);
+    }, 1000);
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+      }
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
       }
     };
   }, [filterAmount]);
@@ -102,7 +114,7 @@ export default function TradesPage({
         <h2>Live Trades</h2>
         <div className="live-indicator">
           <span className="live-dot" />
-          <span>{currentLabel}</span>
+          <span>last update {lastUpdate}s ago</span>
         </div>
       </div>
 
@@ -158,8 +170,8 @@ export default function TradesPage({
                 <th>User</th>
                 <th>Side</th>
                 <th>Outcome</th>
-                <th>Size</th>
-                <th>Price</th>
+                <th>Value</th>
+                <th>Odds</th>
                 <th>Market</th>
                 <th>Time</th>
               </tr>
