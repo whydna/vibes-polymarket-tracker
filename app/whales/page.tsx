@@ -19,17 +19,29 @@ export default function WhalesPage() {
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const filteredTrades = allTrades.filter((trade) => trade.size >= threshold);
+  // Dollar value = size (shares) * price (per share)
+  const filteredTrades = allTrades.filter((trade) => trade.size * trade.price >= threshold);
 
   useEffect(() => {
     async function fetchTrades() {
       try {
-        const response = await fetch(`${DATA_API_URL}/trades?limit=100&sizeMin=1000`);
+        // Use filterType=CASH to filter by dollar value at the API level
+        // Fetch trades >= $1000 (lowest threshold) and filter client-side for higher thresholds
+        const response = await fetch(
+          `${DATA_API_URL}/trades?limit=500&filterType=CASH&filterAmount=1000`
+        );
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`);
         }
         const data: Trade[] = await response.json();
-        setAllTrades(data);
+
+        setAllTrades((prevTrades) => {
+          const existingHashes = new Set(prevTrades.map((t) => t.transactionHash));
+          const newTrades = data.filter((t) => !existingHashes.has(t.transactionHash));
+          const merged = [...newTrades, ...prevTrades];
+          return merged.slice(0, 1000);
+        });
+
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch trades');
@@ -39,8 +51,6 @@ export default function WhalesPage() {
     }
 
     fetchTrades();
-
-    // Auto-refresh every 5 seconds
     intervalRef.current = setInterval(fetchTrades, 5000);
 
     return () => {

@@ -48,7 +48,7 @@ export function TradeCard({ trade }: TradeCardProps) {
       </div>
 
       <div className="trade-details">
-        <span className="trade-size">{formatSize(trade.size)}</span>
+        <span className="trade-size">{formatSize(trade.size * trade.price)}</span>
         <span className="trade-price">@ {(trade.price * 100).toFixed(0)}%</span>
       </div>
 
