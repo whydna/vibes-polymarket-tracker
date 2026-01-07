@@ -369,7 +369,7 @@ body {
 
 /* Live Trades */
 .live-trades {
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -548,6 +548,88 @@ body {
   text-align: right;
 }
 
+/* Trades Table */
+.trades-table-container {
+  overflow-x: auto;
+}
+
+.trades-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.trades-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #333;
+  color: #888;
+  font-weight: 500;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.trades-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #222;
+  vertical-align: middle;
+}
+
+.trade-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.trade-row:hover {
+  background-color: #1a1a1a;
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.user-cell span {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.side-cell {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.side-cell.buy {
+  color: #00d4aa;
+}
+
+.side-cell.sell {
+  color: #ff6b6b;
+}
+
+.size-cell {
+  font-weight: 600;
+  color: #fff;
+}
+
+.market-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #888;
+}
+
+.time-cell {
+  color: #666;
+  white-space: nowrap;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .header h1 {
@@ -583,5 +665,18 @@ body {
 
   .trade-details {
     min-width: auto;
+  }
+
+  .trades-table {
+    font-size: 0.8rem;
+  }
+
+  .trades-table th,
+  .trades-table td {
+    padding: 0.5rem;
+  }
+
+  .market-cell {
+    max-width: 150px;
   }
 }

@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Navigation } from '@/components/Navigation';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -18,7 +17,6 @@ export default function RootLayout({
         <div className="app">
           <header className="header">
             <h1>Polymarket Tracker</h1>
-            <Navigation />
           </header>
 
           <main className="main">{children}</main>
