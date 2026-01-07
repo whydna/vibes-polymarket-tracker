@@ -1,4 +1,6 @@
-import type { Trade } from '../types';
+'use client';
+
+import type { Trade } from '@/types';
 
 interface TradeCardProps {
   trade: Trade;
@@ -17,7 +19,7 @@ function formatTimeAgo(timestamp: number): string {
 
 function formatSize(size: number): string {
   if (size >= 1000) {
-    return `$${(size).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    return `$${size.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   }
   return `$${size.toFixed(2)}`;
 }
@@ -51,7 +53,9 @@ export function TradeCard({ trade }: TradeCardProps) {
       </div>
 
       <div className="trade-event">
-        {trade.icon && <img src={trade.icon} alt="" className="trade-event-icon" />}
+        {trade.icon && (
+          <img src={trade.icon} alt="" className="trade-event-icon" />
+        )}
         <span className="trade-event-title">{trade.title}</span>
       </div>
 

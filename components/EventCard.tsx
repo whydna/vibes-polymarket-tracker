@@ -1,4 +1,6 @@
-import type { PolymarketEvent } from '../types';
+'use client';
+
+import type { PolymarketEvent } from '@/types';
 
 interface EventCardProps {
   event: PolymarketEvent;
@@ -26,21 +28,26 @@ export function EventCard({ event }: EventCardProps) {
   };
 
   // Get Yes price for a market
-  const getYesPrice = (market: typeof event.markets[0]) => {
+  const getYesPrice = (market: (typeof event.markets)[0]) => {
     if (!market.outcomePrices) return '—';
-    const prices = typeof market.outcomePrices === 'string'
-      ? JSON.parse(market.outcomePrices)
-      : market.outcomePrices;
+    const prices =
+      typeof market.outcomePrices === 'string'
+        ? JSON.parse(market.outcomePrices)
+        : market.outcomePrices;
     if (!prices || !prices[0]) return '—';
     return formatPrice(prices[0]);
   };
 
   // Filter to active markets and limit display
-  const activeMarkets = event.markets.filter(m => !m.closed).slice(0, 4);
+  const activeMarkets = event.markets.filter((m) => !m.closed).slice(0, 4);
 
   // Sum volume and liquidity from all markets
-  const totalVolume = event.volumeNum ?? event.markets.reduce((sum, m) => sum + (m.volumeNum || 0), 0);
-  const totalLiquidity = event.liquidityNum ?? event.markets.reduce((sum, m) => sum + (m.liquidityNum || 0), 0);
+  const totalVolume =
+    event.volumeNum ??
+    event.markets.reduce((sum, m) => sum + (m.volumeNum || 0), 0);
+  const totalLiquidity =
+    event.liquidityNum ??
+    event.markets.reduce((sum, m) => sum + (m.liquidityNum || 0), 0);
 
   return (
     <div className="event-card" onClick={handleClick} style={{ cursor: 'pointer' }}>
@@ -63,9 +70,7 @@ export function EventCard({ event }: EventCardProps) {
               <span className="outcome-name">
                 {market.groupItemTitle || market.question}
               </span>
-              <span className="outcome-price outcome-yes">
-                {getYesPrice(market)}
-              </span>
+              <span className="outcome-price outcome-yes">{getYesPrice(market)}</span>
             </div>
           ))}
         </div>

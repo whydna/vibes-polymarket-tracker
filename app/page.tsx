@@ -1,10 +1,12 @@
+'use client';
+
 import { useState, useEffect } from 'react';
-import type { PolymarketEvent } from '../types';
-import { EventCard } from '../components/EventCard';
+import type { PolymarketEvent } from '@/types';
+import { EventCard } from '@/components/EventCard';
 
 const GAMMA_API_URL = '/api/polymarket';
 
-export function Events() {
+export default function EventsPage() {
   const [events, setEvents] = useState<PolymarketEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
