@@ -53,4 +53,6 @@ export interface Trade {
   eventSlug: string;
   icon?: string;
   transactionHash?: string;
+  resolved?: boolean;
+  winningOutcome?: string;
 }

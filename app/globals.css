@@ -656,6 +656,36 @@ body {
   white-space: nowrap;
 }
 
+.status-cell {
+  white-space: nowrap;
+}
+
+.status-loading {
+  color: #666;
+}
+
+.status-active {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.status-resolved {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.status-resolved.won {
+  color: #00d4aa;
+  background-color: rgba(0, 212, 170, 0.15);
+}
+
+.status-resolved.lost {
+  color: #ff6b6b;
+  background-color: rgba(255, 107, 107, 0.15);
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .header h1 {
