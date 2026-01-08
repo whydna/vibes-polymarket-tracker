@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import type { Trade } from '@/types';
@@ -26,6 +26,14 @@ function formatSize(size: number): string {
 }
 
 export default function TradesPage() {
+  return (
+    <Suspense fallback={<div className="loading"><div className="spinner"></div><p>Loading...</p></div>}>
+      <TradesContent />
+    </Suspense>
+  );
+}
+
+function TradesContent() {
   const searchParams = useSearchParams();
   const amt = searchParams.get('amt');
   const user = searchParams.get('user');
