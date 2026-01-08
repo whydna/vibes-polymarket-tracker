@@ -1,15 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { notFound, usePathname } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import type { Trade } from '@/types';
-
-const FILTERS: Record<string, number> = {
-  'whale-1k': 1000,
-  'whale-5k': 5000,
-  'whale-10k': 10000,
-};
 
 const DATA_API_URL = '/api/data';
 
@@ -31,19 +25,12 @@ function formatSize(size: number): string {
   return `$${size.toFixed(2)}`;
 }
 
-export default function TradesPage({
-  params,
-}: {
-  params: { filter?: string[] };
-}) {
-  const pathname = usePathname();
-  const slug = params.filter?.[0];
-  const filterAmount = slug ? FILTERS[slug] : undefined;
+export default function TradesPage() {
+  const searchParams = useSearchParams();
+  const amt = searchParams.get('amt');
+  const user = searchParams.get('user');
 
-  // 404 for invalid slugs
-  if (slug && filterAmount === undefined) {
-    notFound();
-  }
+  const filterAmount = amt ? parseInt(amt, 10) : undefined;
 
   const [allTrades, setAllTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +38,7 @@ export default function TradesPage({
   const [lastUpdate, setLastUpdate] = useState(0);
   const [sortColumn, setSortColumn] = useState<'value' | 'odds' | 'time'>('time');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [userName, setUserName] = useState<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -89,15 +77,24 @@ export default function TradesPage({
   useEffect(() => {
     async function fetchTrades() {
       try {
-        const url = filterAmount
-          ? `${DATA_API_URL}/trades?limit=500&filterType=CASH&filterAmount=${filterAmount}`
-          : `${DATA_API_URL}/trades?limit=500`;
+        let url = `${DATA_API_URL}/trades?limit=500`;
+        if (filterAmount) {
+          url += `&filterType=CASH&filterAmount=${filterAmount}`;
+        }
+        if (user) {
+          url += `&user=${user}`;
+        }
 
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`);
         }
         const data: Trade[] = await response.json();
+
+        // Get username from first trade if filtering by user
+        if (user && data.length > 0) {
+          setUserName(data[0].name || data[0].pseudonym);
+        }
 
         setAllTrades((prevTrades) => {
           const existingHashes = new Set(prevTrades.map((t) => t.transactionHash));
@@ -119,6 +116,7 @@ export default function TradesPage({
     setAllTrades([]);
     setLoading(true);
     setLastUpdate(0);
+    setUserName(null);
 
     fetchTrades();
     intervalRef.current = setInterval(fetchTrades, 30000);
@@ -136,16 +134,14 @@ export default function TradesPage({
         clearInterval(countdownRef.current);
       }
     };
-  }, [filterAmount]);
-
-  const currentLabel = slug
-    ? `$${slug.replace('whale-', '').toUpperCase()}+`
-    : 'All';
+  }, [filterAmount, user]);
 
   return (
     <div className="live-trades">
       <div className="live-header">
-        <h2>Live Trades</h2>
+        <h2>
+          {user ? `Trades by ${userName || 'User'}` : 'Live Trades'}
+        </h2>
         <div className="live-indicator">
           <span className="live-dot" />
           <span>last update {lastUpdate}s ago</span>
@@ -153,27 +149,32 @@ export default function TradesPage({
       </div>
 
       <div className="price-filters">
-        <Link href="/" className={`price-filter-btn ${pathname === '/' ? 'active' : ''}`}>
+        <Link href="/" className={`price-filter-btn ${!amt && !user ? 'active' : ''}`}>
           All
         </Link>
         <Link
-          href="/whale-1k"
-          className={`price-filter-btn ${pathname === '/whale-1k' ? 'active' : ''}`}
+          href="/?amt=1000"
+          className={`price-filter-btn ${amt === '1000' ? 'active' : ''}`}
         >
           🐳 $1K+
         </Link>
         <Link
-          href="/whale-5k"
-          className={`price-filter-btn ${pathname === '/whale-5k' ? 'active' : ''}`}
+          href="/?amt=5000"
+          className={`price-filter-btn ${amt === '5000' ? 'active' : ''}`}
         >
           🐳 $5K+
         </Link>
         <Link
-          href="/whale-10k"
-          className={`price-filter-btn ${pathname === '/whale-10k' ? 'active' : ''}`}
+          href="/?amt=10000"
+          className={`price-filter-btn ${amt === '10000' ? 'active' : ''}`}
         >
           🐳 $10K+
         </Link>
+        {user && (
+          <Link href="/" className="price-filter-btn clear-filter">
+            ✕ Clear user
+          </Link>
+        )}
       </div>
 
       {loading && (
@@ -192,7 +193,7 @@ export default function TradesPage({
 
       {!loading && !error && allTrades.length === 0 && (
         <div className="empty">
-          <p>No trades found{filterAmount ? ` (waiting for ${currentLabel} trades)` : ''}</p>
+          <p>No trades found</p>
         </div>
       )}
 
@@ -220,16 +221,21 @@ export default function TradesPage({
               {sortedTrades.map((trade, index) => (
                 <tr
                   key={`${trade.transactionHash}-${index}`}
-                  onClick={() => window.open(`https://polymarket.com/event/${trade.eventSlug}`, '_blank')}
                   className="trade-row"
                 >
                   <td className="user-cell">
-                    {trade.profileImage ? (
-                      <img src={trade.profileImage} alt="" className="trade-avatar" />
-                    ) : (
-                      <div className="trade-avatar-placeholder" />
-                    )}
-                    <span>{trade.name || trade.pseudonym}</span>
+                    <Link
+                      href={`/?user=${trade.proxyWallet}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="user-link"
+                    >
+                      {trade.profileImage ? (
+                        <img src={trade.profileImage} alt="" className="trade-avatar" />
+                      ) : (
+                        <div className="trade-avatar-placeholder" />
+                      )}
+                      <span>{trade.name || trade.pseudonym}</span>
+                    </Link>
                   </td>
                   <td className={`side-cell ${trade.side.toLowerCase()}`}>
                     {trade.side === 'BUY' ? 'Buy' : 'Sell'}
@@ -237,7 +243,13 @@ export default function TradesPage({
                   <td>{trade.outcome}</td>
                   <td className="size-cell">{formatSize(trade.size * trade.price)}</td>
                   <td>{(trade.price * 100).toFixed(0)}%</td>
-                  <td className="market-cell">{trade.title}</td>
+                  <td
+                    className="market-cell"
+                    onClick={() => window.open(`https://polymarket.com/event/${trade.eventSlug}`, '_blank')}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {trade.title}
+                  </td>
                   <td className="time-cell">{formatTimeAgo(trade.timestamp)}</td>
                 </tr>
               ))}

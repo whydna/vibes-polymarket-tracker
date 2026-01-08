@@ -43,6 +43,7 @@ export interface Trade {
   name: string;
   pseudonym: string;
   profileImage?: string;
+  proxyWallet: string;
   side: 'BUY' | 'SELL';
   size: number;
   price: number;

@@ -597,16 +597,36 @@ body {
 }
 
 .user-cell {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
   white-space: nowrap;
 }
 
-.user-cell span {
+.user-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.user-link:hover {
+  color: #7c3aed;
+}
+
+.user-link span {
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.clear-filter {
+  background-color: rgba(255, 107, 107, 0.15);
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+}
+
+.clear-filter:hover {
+  background-color: rgba(255, 107, 107, 0.25);
 }
 
 .side-cell {
