@@ -6,6 +6,12 @@ import Link from 'next/link';
 import type { Trade } from '@/types';
 
 const DATA_API_URL = '/api/data';
+const GAMMA_API_URL = '/api/polymarket';
+
+interface EventResolution {
+  closed: boolean;
+  winningOutcome?: string;
+}
 
 function formatTimeAgo(timestamp: number): string {
   const seconds = Math.floor(Date.now() / 1000 - timestamp);
@@ -23,6 +29,47 @@ function formatSize(size: number): string {
     return `$${size.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   }
   return `$${size.toFixed(2)}`;
+}
+
+function getWinningOutcome(outcomes: string[], outcomePrices: string[]): string | undefined {
+  // The winning outcome has price ~1, losing has price ~0
+  const winningIndex = outcomePrices.findIndex(p => parseFloat(p) > 0.5);
+  return winningIndex >= 0 ? outcomes[winningIndex] : undefined;
+}
+
+async function fetchEventResolutions(slugs: string[]): Promise<Map<string, EventResolution>> {
+  const resolutions = new Map<string, EventResolution>();
+  if (slugs.length === 0) return resolutions;
+
+  try {
+    // Fetch events in batches to avoid URL length limits
+    const batchSize = 20;
+    for (let i = 0; i < slugs.length; i += batchSize) {
+      const batch = slugs.slice(i, i + batchSize);
+      const slugQuery = batch.map(s => `slug=${encodeURIComponent(s)}`).join('&');
+      const response = await fetch(`${GAMMA_API_URL}/events?${slugQuery}`);
+      if (!response.ok) continue;
+
+      const events = await response.json();
+      for (const event of events) {
+        if (event.closed && event.markets?.length > 0) {
+          const market = event.markets[0];
+          const outcomes = typeof market.outcomes === 'string' ? JSON.parse(market.outcomes) : market.outcomes;
+          const outcomePrices = typeof market.outcomePrices === 'string' ? JSON.parse(market.outcomePrices) : market.outcomePrices;
+          resolutions.set(event.slug, {
+            closed: true,
+            winningOutcome: getWinningOutcome(outcomes, outcomePrices),
+          });
+        } else {
+          resolutions.set(event.slug, { closed: false });
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch event resolutions:', err);
+  }
+
+  return resolutions;
 }
 
 export default function TradesPage() {
@@ -47,6 +94,7 @@ function TradesContent() {
   const [sortColumn, setSortColumn] = useState<'value' | 'odds' | 'time'>('time');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [userName, setUserName] = useState<string | null>(null);
+  const [eventResolutions, setEventResolutions] = useState<Map<string, EventResolution>>(new Map());
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -102,6 +150,21 @@ function TradesContent() {
         // Get username from first trade if filtering by user
         if (user && data.length > 0) {
           setUserName(data[0].name || data[0].pseudonym);
+        }
+
+        // Get unique event slugs that we don't have resolution data for
+        const newSlugs = Array.from(new Set(data.map(t => t.eventSlug))).filter(
+          slug => !eventResolutions.has(slug)
+        );
+
+        // Fetch resolution data for new events
+        if (newSlugs.length > 0) {
+          const newResolutions = await fetchEventResolutions(newSlugs);
+          setEventResolutions(prev => {
+            const updated = new Map(prev);
+            newResolutions.forEach((value, key) => updated.set(key, value));
+            return updated;
+          });
         }
 
         setAllTrades((prevTrades) => {
@@ -210,18 +273,19 @@ function TradesContent() {
           <table className="trades-table">
             <thead>
               <tr>
+                <th className="sortable" onClick={() => handleSort('time')}>
+                  Time {sortColumn === 'time' ? (sortDirection === 'desc' ? '▼' : '▲') : '⇅'}
+                </th>
                 <th>User</th>
+                <th>Market</th>
                 <th>Side</th>
                 <th>Outcome</th>
-                <th className="sortable" onClick={() => handleSort('value')}>
-                  Value {sortColumn === 'value' ? (sortDirection === 'desc' ? '▼' : '▲') : '⇅'}
-                </th>
+                <th>Result</th>
                 <th className="sortable" onClick={() => handleSort('odds')}>
                   Odds {sortColumn === 'odds' ? (sortDirection === 'desc' ? '▼' : '▲') : '⇅'}
                 </th>
-                <th>Market</th>
-                <th className="sortable" onClick={() => handleSort('time')}>
-                  Time {sortColumn === 'time' ? (sortDirection === 'desc' ? '▼' : '▲') : '⇅'}
+                <th className="sortable" onClick={() => handleSort('value')}>
+                  Value {sortColumn === 'value' ? (sortDirection === 'desc' ? '▼' : '▲') : '⇅'}
                 </th>
               </tr>
             </thead>
@@ -231,6 +295,7 @@ function TradesContent() {
                   key={`${trade.transactionHash}-${index}`}
                   className="trade-row"
                 >
+                  <td className="time-cell">{formatTimeAgo(trade.timestamp)}</td>
                   <td className="user-cell">
                     <Link
                       href={`/?user=${trade.proxyWallet}`}
@@ -245,12 +310,6 @@ function TradesContent() {
                       <span>{trade.name || trade.pseudonym}</span>
                     </Link>
                   </td>
-                  <td className={`side-cell ${trade.side.toLowerCase()}`}>
-                    {trade.side === 'BUY' ? 'Buy' : 'Sell'}
-                  </td>
-                  <td>{trade.outcome}</td>
-                  <td className="size-cell">{formatSize(trade.size * trade.price)}</td>
-                  <td>{(trade.price * 100).toFixed(0)}%</td>
                   <td
                     className="market-cell"
                     onClick={() => window.open(`https://polymarket.com/event/${trade.eventSlug}`, '_blank')}
@@ -258,7 +317,25 @@ function TradesContent() {
                   >
                     {trade.title}
                   </td>
-                  <td className="time-cell">{formatTimeAgo(trade.timestamp)}</td>
+                  <td className={`side-cell ${trade.side.toLowerCase()}`}>
+                    {trade.side === 'BUY' ? 'Buy' : 'Sell'}
+                  </td>
+                  <td>{trade.outcome}</td>
+                  <td className="status-cell">
+                    {(() => {
+                      const resolution = eventResolutions.get(trade.eventSlug);
+                      if (!resolution) return <span className="status-loading">-</span>;
+                      if (!resolution.closed) return <span className="status-active">Active</span>;
+                      const won = resolution.winningOutcome === trade.outcome;
+                      return (
+                        <span className={`status-resolved ${won ? 'won' : 'lost'}`}>
+                          {resolution.winningOutcome}
+                        </span>
+                      );
+                    })()}
+                  </td>
+                  <td>{(trade.price * 100).toFixed(0)}%</td>
+                  <td className="size-cell">{formatSize(trade.size * trade.price)}</td>
                 </tr>
               ))}
             </tbody>
